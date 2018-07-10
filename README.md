@@ -1,6 +1,4 @@
-Synner /'sɪnə'/
-
-> A (WIP) TCP SYN flood client written in Rust, powered by [libpnet](https://github.com/libpnet/libpnet).
+# Synner /'sɪnə'/
 
 ---
 
