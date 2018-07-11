@@ -16,7 +16,7 @@ pub mod packet {
     use self::pnet_datalink::{Channel, NetworkInterface};
 
     #[derive(Debug)]
-    pub struct PartialPacketData<'a> {
+    pub struct PartialTCPPacketData<'a> {
         pub destination_ip: Ipv4Addr,
         pub iface_ip: Ipv4Addr,
         pub iface_name: &'a String,
@@ -24,7 +24,7 @@ pub mod packet {
     }
 
 
-    pub fn build_random_packet(partial_packet: &PartialPacketData) -> Option<[u8; 66]> {
+    pub fn build_random_packet(partial_packet: &PartialTCPPacketData) -> Option<[u8; 66]> {
         const ETHERNET_HEADER_LEN: usize = 14;
         const IPV4_HEADER_LEN: usize = 20;
         const TCP_HEADER_LEN: usize = 32;
@@ -35,7 +35,7 @@ pub mod packet {
         {
             let mut eth_header = MutableEthernetPacket::new(&mut tmp_packet[..ETHERNET_HEADER_LEN]).unwrap();
 
-            eth_header.set_destination(MacAddr::new(8, 0, 39, 203, 157, 11));
+            eth_header.set_destination(MacAddr::new(255, 255, 255, 255, 255, 255));
             eth_header.set_source(*partial_packet.iface_src_mac);
             eth_header.set_ethertype(EtherTypes::Ipv4);
         }
@@ -80,7 +80,7 @@ pub mod packet {
         Some(tmp_packet)    
     }
 
-    pub fn send_tcp_packet(destination_ip: Ipv4Addr, interface: String) {
+    pub fn send_tcp_packet(destination_ip: Ipv4Addr, interface: String, count: u32) {
         let interfaces = pnet_datalink::interfaces();
         println!("{:?}", &interfaces);
 
@@ -96,7 +96,7 @@ pub mod packet {
             _ => panic!("ERR - Interface IP is IPv6 (or unknown) which is not currently supported"),
         };
 
-        let partial_packet: PartialPacketData = PartialPacketData {
+        let partial_packet: PartialTCPPacketData = PartialTCPPacketData {
             destination_ip: destination_ip,
             iface_ip,
             iface_name: &interface.name,
@@ -109,15 +109,8 @@ pub mod packet {
             Err(e) => panic!("Error happened {}", e),
         };
 
-        let mut count = 0;
-
-        loop {
-            count += 1;
+        for _ in 0..count {
             tx.send_to(&build_random_packet(&partial_packet).unwrap().to_vec(), None);
-
-            if &count % 10000 == 0 {
-                println!("Sent packet #{}", &count);
-            }        
         }
     }    
 }

@@ -43,5 +43,10 @@ fn parse_arguments() -> Result<(Ipv4Addr, String), &'static str>{
 
 fn main() {
     let parsed_args = parse_arguments().unwrap();
-    send_tcp_packet(parsed_args.0, parsed_args.1);
+
+    let count = 1;
+
+    send_tcp_packet(parsed_args.0, parsed_args.1, count);  
+
+    println!("Sent {} packet(s)", &count);
 }
