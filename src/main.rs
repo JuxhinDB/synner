@@ -1,19 +1,29 @@
 extern crate rand;
 extern crate pnet;
+extern crate pnet_base;
 extern crate pnet_packet;
 extern crate pnet_datalink;
 extern crate pnet_transport;
 
 
 use std::env;
-use std::net::{Ipv4Addr};
+use std::net::{IpAddr, Ipv4Addr};
 
-use pnet::util::{MacAddr};
+use pnet_base::{MacAddr};
 use pnet_packet::tcp::{MutableTcpPacket, TcpFlags, TcpOption};
 use pnet_packet::ethernet::{MutableEthernetPacket, EtherTypes};
 use pnet_packet::ip::{IpNextHeaderProtocols};
 use pnet_packet::ipv4::{MutableIpv4Packet, Ipv4Flags};
 use pnet_datalink::{Channel, NetworkInterface};
+
+
+#[derive(Debug)]
+struct PartialPacketData<'a> {
+    destination_ip: Ipv4Addr,
+    iface_ip: Ipv4Addr,
+    iface_name: &'a String,
+    iface_src_mac: &'a MacAddr
+}
 
 
 fn print_help() {
@@ -45,19 +55,19 @@ fn parse_arguments() -> Result<(Ipv4Addr, String), &'static str>{
     }
 }
 
-fn build_random_packet(destination_ip: &Ipv4Addr) -> Option<[u8; 66]> {
+fn build_random_packet(partial_packet: &PartialPacketData) -> Option<[u8; 66]> {
     const ETHERNET_HEADER_LEN: usize = 14;
-    const TCP_HEADER_LEN: usize = 32;
     const IPV4_HEADER_LEN: usize = 20;
+    const TCP_HEADER_LEN: usize = 32;
 
     let mut tmp_packet = [0u8; ETHERNET_HEADER_LEN + IPV4_HEADER_LEN + TCP_HEADER_LEN];
     
-    // Setup Ethernet Header
+    // Setup Ethernet header
     {
         let mut eth_header = MutableEthernetPacket::new(&mut tmp_packet[..ETHERNET_HEADER_LEN]).unwrap();
 
         eth_header.set_destination(MacAddr::new(8, 0, 39, 203, 157, 11));
-        eth_header.set_source(MacAddr::new(10, 0, 39, 0, 0, 12));
+        eth_header.set_source(*partial_packet.iface_src_mac);
         eth_header.set_ethertype(EtherTypes::Ipv4);
     }
 
@@ -68,8 +78,8 @@ fn build_random_packet(destination_ip: &Ipv4Addr) -> Option<[u8; 66]> {
         ip_header.set_total_length(52);
         ip_header.set_fragment_offset(16384);
         ip_header.set_next_level_protocol(IpNextHeaderProtocols::Tcp);
-        ip_header.set_source(Ipv4Addr::new(192, 168, 33, 1));
-        ip_header.set_destination(destination_ip.clone());
+        ip_header.set_source(partial_packet.iface_ip);
+        ip_header.set_destination(partial_packet.destination_ip);
         ip_header.set_identification(rand::random::<u16>());
         ip_header.set_ttl(128);
         ip_header.set_version(4);
@@ -94,7 +104,7 @@ fn build_random_packet(destination_ip: &Ipv4Addr) -> Option<[u8; 66]> {
 
         tcp_header.set_options(&vec![TcpOption::wscale(8), TcpOption::sack_perm(), TcpOption::mss(1460), TcpOption::nop(), TcpOption::nop()]);
 
-        let checksum = pnet_packet::tcp::ipv4_checksum(&tcp_header.to_immutable(), &Ipv4Addr::new(192, 168, 33, 1), &destination_ip);
+        let checksum = pnet_packet::tcp::ipv4_checksum(&tcp_header.to_immutable(), &partial_packet.iface_ip, &partial_packet.destination_ip);
         tcp_header.set_checksum(checksum);        
     }
 
@@ -112,6 +122,18 @@ fn send_tcp_packet(destination_ip: Ipv4Addr, interface: String) {
         .next()
         .unwrap();
 
+    let iface_ip = match interface.ips[0].ip() {
+        IpAddr::V4(ipv4) => ipv4,
+        _ => panic!("ERR - Interface IP is IPv6 (or unknown) which is not currently supported"),
+    };
+
+    let partial_packet: PartialPacketData = PartialPacketData {
+        destination_ip: destination_ip,
+        iface_ip,
+        iface_name: &interface.name,
+        iface_src_mac: &interface.mac.unwrap()
+    };
+
     let (mut tx, _) = match pnet_datalink::channel(&interface, Default::default()) {
         Ok(Channel::Ethernet(tx, rx)) => (tx, rx),
         Ok(_) => panic!("Unknown channel type"),
@@ -122,7 +144,7 @@ fn send_tcp_packet(destination_ip: Ipv4Addr, interface: String) {
 
     loop {
         count += 1;
-        tx.send_to(&build_random_packet(&destination_ip).unwrap().to_vec(), None);
+        tx.send_to(&build_random_packet(&partial_packet).unwrap().to_vec(), None);
 
         if &count % 10000 == 0 {
             println!("Sent packet #{}", &count);

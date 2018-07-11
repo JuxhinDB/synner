@@ -5,6 +5,7 @@ authors = ["Juxhin Dyrmishi Brigjaj <juxhinbox@gmail.com>"]
 
 [dependencies]
 pnet = "0.21.0"
+pnet_base = "0.21.0"
 pnet_datalink = "0.21.0"
 pnet_packet = "0.21.0"
 pnet_transport = "0.21.0"
