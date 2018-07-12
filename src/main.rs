@@ -6,7 +6,7 @@ extern crate pnet_packet;
 extern crate pnet_datalink;
 extern crate pnet_transport;
 
-use synner::tcp::packet::{send_tcp_packet};
+use synner::tcp::packet::{send_tcp_packets};
 
 use std::env;
 use std::net::{Ipv4Addr};
@@ -46,7 +46,7 @@ fn main() {
 
     let count = 1;
 
-    send_tcp_packet(parsed_args.0, parsed_args.1, count);  
+    send_tcp_packets(parsed_args.0, parsed_args.1, count);  
 
     println!("Sent {} packet(s)", &count);
 }
