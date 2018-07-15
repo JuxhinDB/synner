@@ -19,25 +19,15 @@ fn print_help() {
 fn parse_arguments() -> Result<(Ipv4Addr, String), &'static str>{
     let args: Vec<String> = env::args().collect();
 
-    match args.len() {
-        1 => {
-            print_help();
-            Err("Too few arguments")
-        },
-        2 => {
-            print_help();
-            Err("Too few arguments")
-        },
-        3 => {
-            let dst_ip = args[1].parse::<Ipv4Addr>().unwrap();
-            let iface = args[2].to_string();
-            Ok((dst_ip, iface))
-        },
-        _ => {
-            print_help();
-            Err("Too many arguments")
-        }
+    if args.len() != 3 {
+        println!("Too few arguments. See usage:");
+        panic!(print_help());
     }
+
+    let dst_ip = args[1].parse::<Ipv4Addr>().unwrap();
+    let iface = args[2].to_string();
+    
+    Ok((dst_ip, iface))
 }
 
 
