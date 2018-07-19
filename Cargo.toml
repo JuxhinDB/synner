@@ -6,6 +6,7 @@ license = "MIT"
 license-file = "LICENSE"
 homepage = "https://blog.digital-horror.com/synner-a-tcp-syn-client-written-in-rust/"
 description = "A TCP SYN flood client written in Rust, powered by libpnet"
+repository = "https://github.com/JuxhinDB/synner"
 
 [dependencies]
 pnet = "0.21.0"
