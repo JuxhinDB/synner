@@ -28,7 +28,7 @@ pub mod packet {
     pub fn build_random_packet(partial_packet: &PartialTCPPacketData, tmp_packet: &mut [u8]) {
         const ETHERNET_HEADER_LEN: usize = 14;
         const IPV4_HEADER_LEN: usize = 20;
-        
+
         // Setup Ethernet header
         {
             let mut eth_header = MutableEthernetPacket::new(&mut tmp_packet[..ETHERNET_HEADER_LEN]).unwrap();
@@ -53,7 +53,7 @@ pub mod packet {
             ip_header.set_flags(Ipv4Flags::DontFragment);
 
             let checksum = pnet_packet::ipv4::checksum(&ip_header.to_immutable());
-            ip_header.set_checksum(checksum);           
+            ip_header.set_checksum(checksum);
         }
 
         // Setup TCP header
@@ -72,20 +72,20 @@ pub mod packet {
             tcp_header.set_options(&vec![TcpOption::wscale(8), TcpOption::sack_perm(), TcpOption::mss(1460), TcpOption::nop(), TcpOption::nop()]);
 
             let checksum = pnet_packet::tcp::ipv4_checksum(&tcp_header.to_immutable(), &partial_packet.iface_ip, &partial_packet.destination_ip);
-            tcp_header.set_checksum(checksum);        
+            tcp_header.set_checksum(checksum);
         }
     }
 
     pub fn send_tcp_packets(destination_ip: Ipv4Addr, interface: String, count: u32) {
         let interfaces = pnet_datalink::interfaces();
-        
+
         println!("List of Available Interfaces\n");
 
         for interface in interfaces.iter() {
-            let iface_ip = match interface.ips[0].ip() {
-                IpAddr::V4(ipv4) => ipv4,
+            let iface_ip = interface.ips.iter().next().map(|x| match x.ip() {
+                IpAddr::V4(ipv4) => Some(ipv4),
                 _ => panic!("ERR - Interface IP is IPv6 (or unknown) which is not currently supported"),
-            };
+            });
 
             println!("Interface name: {:?}\nInterface MAC: {:?}\nInterface IP: {:?}\n", &interface.name, &interface.mac.unwrap(), iface_ip)
         }
@@ -95,9 +95,9 @@ pub mod packet {
             .into_iter()
             .filter(interfaces_name_match)
             .next()
-            .unwrap();
+            .expect(&format!("could not find interface by name {}", interface));
 
-        let iface_ip = match interface.ips[0].ip() {
+        let iface_ip = match interface.ips.iter().nth(0).expect(&format!("the interface {} does not have any IP addresses", interface)).ip() {
             IpAddr::V4(ipv4) => ipv4,
             _ => panic!("ERR - Interface IP is IPv6 (or unknown) which is not currently supported"),
         };
@@ -119,11 +119,11 @@ pub mod packet {
 
             if &i % 10000 == 0 {
                 println!("Sent {:?} packets", &i);
-            } 
+            }
 
             tx.build_and_send(1, 66, &mut |packet: &mut [u8]| {
                 build_random_packet(&partial_packet, packet);
             });
         }
-    }    
+    }
 }
