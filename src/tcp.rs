@@ -33,7 +33,7 @@ pub mod packet {
         {
             let mut eth_header = MutableEthernetPacket::new(&mut tmp_packet[..ETHERNET_HEADER_LEN]).unwrap();
 
-            eth_header.set_destination(MacAddr::new(255, 255, 255, 255, 255, 255));
+            eth_header.set_destination(MacAddr::broadcast());
             eth_header.set_source(*partial_packet.iface_src_mac);
             eth_header.set_ethertype(EtherTypes::Ipv4);
         }
@@ -43,12 +43,11 @@ pub mod packet {
             let mut ip_header = MutableIpv4Packet::new(&mut tmp_packet[ETHERNET_HEADER_LEN..(ETHERNET_HEADER_LEN + IPV4_HEADER_LEN)]).unwrap();
             ip_header.set_header_length(69);
             ip_header.set_total_length(52);
-            ip_header.set_fragment_offset(16384);
             ip_header.set_next_level_protocol(IpNextHeaderProtocols::Tcp);
             ip_header.set_source(partial_packet.iface_ip);
             ip_header.set_destination(partial_packet.destination_ip);
             ip_header.set_identification(rand::random::<u16>());
-            ip_header.set_ttl(128);
+            ip_header.set_ttl(64);
             ip_header.set_version(4);
             ip_header.set_flags(Ipv4Flags::DontFragment);
 
@@ -67,9 +66,9 @@ pub mod packet {
             tcp_header.set_window(64240);
             tcp_header.set_data_offset(8);
             tcp_header.set_urgent_ptr(0);
-            tcp_header.set_sequence(rand::random::<u32>());
+            tcp_header.set_sequence(0);
 
-            tcp_header.set_options(&vec![TcpOption::wscale(8), TcpOption::sack_perm(), TcpOption::mss(1460), TcpOption::nop(), TcpOption::nop()]);
+            tcp_header.set_options(&[TcpOption::mss(1460), TcpOption::sack_perm(),  TcpOption::nop(), TcpOption::nop(), TcpOption::wscale(7)]);
 
             let checksum = pnet_packet::tcp::ipv4_checksum(&tcp_header.to_immutable(), &partial_packet.iface_ip, &partial_packet.destination_ip);
             tcp_header.set_checksum(checksum);
