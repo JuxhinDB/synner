@@ -10,12 +10,11 @@ pub mod packet {
 
     use std::net::{IpAddr, Ipv4Addr};
 
-    use self::pnet_base::{MacAddr};
     use self::pnet_packet::tcp::{MutableTcpPacket, TcpFlags, TcpOption};
     use self::pnet_packet::ethernet::{MutableEthernetPacket, EtherTypes};
     use self::pnet_packet::ip::{IpNextHeaderProtocols};
     use self::pnet_packet::ipv4::{MutableIpv4Packet, Ipv4Flags};
-    use self::pnet_datalink::{Channel, NetworkInterface};
+    use self::pnet_datalink::{Channel, NetworkInterface, MacAddr};
 
     pub struct PartialTCPPacketData<'a> {
         pub destination_ip: Ipv4Addr,
